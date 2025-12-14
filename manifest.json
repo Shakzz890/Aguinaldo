@@ -1,6 +1,6 @@
 {
   "name": "Aguinaldo Randomizer",
-  "short_name": "Pasko App",
+  "short_name": "Aguinaldo Randomizer",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
