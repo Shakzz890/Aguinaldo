@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aguinaldo Randomizer</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 80px;
+            transition: background 0.3s;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #212529 0%, #000000 100%);
+            color: #fff;
+        }
+
+        .navbar { z-index: 1000; }
+
+        .snowflake {
+            position: fixed;
+            top: -20px;
+            color: #87CEEB;
+            text-shadow: 0 0 2px rgba(0,0,0,0.1);
+            z-index: 1;
+            pointer-events: none;
+            animation: fall linear infinite;
+        }
+        
+        @keyframes fall {
+            to { transform: translateY(105vh); }
+        }
+
+        .main-card {
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 60px;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        
+        body.dark-mode .main-card {
+            background: rgba(33, 37, 41, 0.95);
+            color: white;
+            box-shadow: 0 10px 30px rgba(255,255,255,0.05);
+        }
+
+        #prize-rows {
+            max-height: 300px; 
+            overflow-y: auto;  
+            overflow-x: hidden;
+            padding-right: 5px; 
+            margin-bottom: 10px;
+        }
+        
+        #prize-rows::-webkit-scrollbar { width: 6px; }
+        #prize-rows::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 10px; }
+        body.dark-mode #prize-rows::-webkit-scrollbar-thumb { background-color: #555; }
+
+        .prize-row { cursor: grab; }
+        .prize-row.dragging { opacity: 0.5; background: #f0f0f0; border: 1px dashed #999; }
+
+        body.dark-mode .modal-content {
+            background-color: #2b3035;
+            color: #fff;
+            border: 1px solid #495057;
+        }
+        body.dark-mode .modal-header, 
+        body.dark-mode .modal-footer {
+            border-color: #495057;
+        }
+        body.dark-mode .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        body.dark-mode .form-control {
+            background-color: #212529;
+            border-color: #495057;
+            color: #fff; 
+        }
+        body.dark-mode .form-control::placeholder {
+            color: #aaa; 
+        }
+
+        body.dark-mode .alert-light {
+            background-color: #212529; 
+            color: #e0e0e0; 
+            border-color: #373b3e;
+        }
+        body.dark-mode .text-muted {
+            color: #adb5bd !important; 
+        }
+
+        .result-amount {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .social-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .social-icon {
+            font-size: 1.8rem;
+            color: #dc3545; 
+            transition: color 0.3s, transform 0.2s;
+            cursor: pointer;
+        }
+        .social-icon:hover { 
+            color: #b02a37; 
+            transform: scale(1.1); 
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        #confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+        /* NEW: Mobile fix for settings panel */
+        @media (max-width: 767px) {
+            .settings-info-panel {
+                height: auto !important;
+                min-height: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar fixed-top navbar-light bg-transparent pt-3">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-danger"><i class="bi bi-gift-fill me-2"></i>Aguinaldo Randomizer</span>
+            <div>
+                <button class="btn btn-link text-secondary p-0 me-3" onclick="toggleDarkMode()">
+                    <i id="darkModeIcon" class="bi bi-moon-stars-fill fs-5"></i>
+                </button>
+                <button class="btn btn-link text-secondary p-0" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="bi bi-gear-fill fs-5"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="card main-card p-4 text-center">
+        
+        <span class="badge bg-danger bg-opacity-10 text-danger mb-3 px-3 py-2 rounded-pill fw-bold" style="width: fit-content; margin: 0 auto;">
+            👋 Maligayang Pasko!
+        </span>
+
+        <div id="start-screen">
+            <h2 class="fw-bold mb-3">Ready for your <br><span class="text-danger">Pamasko?</span></h2>
+            <p class="text-muted mb-4">Tap below to reveal your Christmas gift!<br>Good luck & have fun!</p>
+            
+            <button class="btn btn-danger btn-lg w-100 rounded-pill py-3 fw-bold shadow-sm" onclick="revealPrize()">
+                Open Gift 🧧
+            </button>
+
+            <p class="small text-muted mt-4 mb-0 opacity-75">
+                <i class="bi bi-info-circle me-1"></i> Want to change the prizes?<br>
+                Click the <b>Gear Icon ⚙️</b> above to customize!
+            </p>
+        </div>
+
+        <div id="result-screen" style="display: none;">
+            <h5 class="text-muted mb-3">Congratulations!</h5>
+            <div id="amount-text" class="result-amount text-danger mb-3">...</div>
+            <p class="text-muted">Merry Christmas 🎄</p>
+            <button class="btn btn-outline-danger w-100 rounded-pill py-2 mt-2" onclick="resetApp()">
+                Try Again 🔄
+            </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-gear-fill me-2 text-danger"></i>Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    
+                    <div class="row">
+                        <div class="col-md-7 d-flex flex-column">
+                            <div class="d-flex justify-content-between text-muted small fw-bold mb-2 px-1">
+                                <span>Prize Name</span>
+                                <span class="me-4">Chance</span>
+                            </div>
+
+                            <div id="prize-rows">
+                                </div>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-light w-100 border-dashed text-muted mt-2" style="border: 2px dashed #dee2e6;" onclick="addPrizeRow()">
+                                    <i class="bi bi-plus-circle me-1"></i> Add
+                                </button>
+                                <button class="btn btn-outline-secondary w-50 mt-2" onclick="autoBalance()">
+                                    Balance ⚖️
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-5 mt-4 mt-md-0">
+                            <div class="alert alert-light border-start border-4 border-danger small text-muted settings-info-panel" role="alert">
+                                <strong><i class="bi bi-lightbulb-fill me-1"></i> How to set up:</strong><br>
+                                <ul class="ps-3 mb-0 mt-2">
+                                    <li><b>Prize:</b> Type "1000", "Chocolate", or "Hug".</li>
+                                    <li><b>Chance:</b> Use numbers. Higher number = easier to win.</li>
+                                    <li><b>Reorder:</b> Drag items to rearrange them!</li>
+                                </ul>
+                                <hr class="my-3">
+                                <em>Example:</em><br>
+                                • Set <b>Chocolate</b> to <b>50</b> (Common)<br>
+                                • Set <b>1000 Pesos</b> to <b>1</b> (Rare)
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-danger w-100 rounded-pill fw-bold" onclick="saveSettings()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="social-footer d-flex justify-content-center gap-4">
+        <a href="https://www.facebook.com/share/1aEHE8qz86/" target="_blank"><i class="bi bi-facebook social-icon"></i></a>
+        <a href="https://www.tiktok.com/@shxkzz05?_r=1&_t=ZS-92CgC9Rc3m8" target="_blank"><i class="bi bi-tiktok social-icon"></i></a>
+        <a href="https://www.instagram.com/shakzzph?igsh=MTR4enRzbjJ4aWh5MQ==" target="_blank"><i class="bi bi-instagram social-icon"></i></a>
+        <a href="https://www.youtube.com/@Shakzz05" target="_blank"><i class="bi bi-youtube social-icon"></i></a>
+    </div>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let defaultPrizes = [
+            {val: 50, weight: 50},
+            {val: 100, weight: 30},
+            {val: 200, weight: 15},
+            {val: 500, weight: 4},
+            {val: 1000, weight: 1},
+            {val: "Bawi Next Time 🤣", weight: 30}
+        ];
+        
+        let prizePool = JSON.parse(localStorage.getItem("prizePool")) || defaultPrizes;
+
+        function initSnow() {
+            const symbols = ['❄', '❅', '❆', '•'];
+            for(let i=0; i<50; i++){
+                const flake = document.createElement('div');
+                flake.classList.add('snowflake');
+                flake.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                const x = Math.random() * 100;
+                const duration = Math.random() * 5 + 5;
+                const size = Math.random() * 1.5 + 0.5;
+                const delay = Math.random() * 5;
+                flake.style.left = x + 'vw';
+                flake.style.fontSize = size + 'rem';
+                flake.style.animationDuration = duration + 's';
+                flake.style.animationDelay = '-' + delay + 's';
+                document.body.appendChild(flake);
+            }
+        }
+        initSnow();
+
+        function revealPrize() {
+            let totalWeight = 0;
+            prizePool.forEach(p => totalWeight += p.weight);
+            let randomNum = Math.random() * totalWeight;
+            let win = prizePool[0].val;
+            
+            for (let i = 0; i < prizePool.length; i++) {
+                if (randomNum < prizePool[i].weight) {
+                    win = prizePool[i].val;
+                    break;
+                }
+                randomNum -= prizePool[i].weight;
+            }
+
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+
+            const cleanWin = win.toString().trim();
+            const amountEl = document.getElementById('amount-text');
+            
+            if (!isNaN(cleanWin)) {
+                amountEl.innerText = "₱" + cleanWin;
+                amountEl.style.fontSize = "3.5rem";
+            } else {
+                amountEl.innerText = cleanWin;
+                if (cleanWin.length > 12) {
+                    amountEl.style.fontSize = "2rem";
+                } else {
+                    amountEl.style.fontSize = "3rem";
+                }
+            }
+            fireConfetti();
+        }
+
+        function resetApp() {
+            document.getElementById('start-screen').style.display = 'block';
+            document.getElementById('result-screen').style.display = 'none';
+        }
+
+        const settingsModal = document.getElementById('settingsModal');
+        settingsModal.addEventListener('show.bs.modal', renderPrizeInputs);
+
+        function renderPrizeInputs() {
+            const container = document.getElementById('prize-rows');
+            container.innerHTML = "";
+            prizePool.forEach((p) => {
+                const row = document.createElement('div');
+                row.className = 'd-flex gap-2 mb-2 prize-row';
+                row.draggable = true;
+                row.innerHTML = `
+                    <div class="d-flex align-items-center text-muted pe-2" style="cursor:grab"><i class="bi bi-grip-vertical"></i></div>
+                    <input type="text" class="form-control input-prize" value="${p.val}" placeholder="Prize">
+                    <input type="number" class="form-control input-chance text-center" value="${p.weight}" placeholder="%" style="max-width: 80px;">
+                    <button class="btn btn-light text-danger" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+                `;
+                container.appendChild(row);
+            });
+            enableDrag();
+        }
+
+        function addPrizeRow() {
+            const container = document.getElementById('prize-rows');
+            const row = document.createElement('div');
+            row.className = 'd-flex gap-2 mb-2 prize-row';
+            row.draggable = true;
+            row.innerHTML = `
+                <div class="d-flex align-items-center text-muted pe-2" style="cursor:grab"><i class="bi bi-grip-vertical"></i></div>
+                <input type="text" class="form-control input-prize" placeholder="e.g. Hug">
+                <input type="number" class="form-control input-chance text-center" value="10" placeholder="%" style="max-width: 80px;">
+                <button class="btn btn-light text-danger" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+            `;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+            enableDrag();
+        }
+
+        function enableDrag(){
+            const container = document.getElementById("prize-rows");
+            container.ondragover = e => {
+                e.preventDefault();
+                const dragging = document.querySelector(".dragging");
+                const afterElement = getDragAfterElement(container, e.clientY);
+                if (afterElement == null) {
+                    container.appendChild(dragging);
+                } else {
+                    container.insertBefore(dragging, afterElement);
+                }
+            };
+
+            document.querySelectorAll(".prize-row").forEach(row => {
+                row.ondragstart = () => row.classList.add("dragging");
+                row.ondragend = () => row.classList.remove("dragging");
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.prize-row:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function autoBalance(){
+            const rows = document.querySelectorAll(".input-chance");
+            const val = Math.max(1, Math.floor(100 / rows.length));
+            rows.forEach(r => r.value = val);
+        }
+
+        function saveSettings() {
+            const rows = document.querySelectorAll('.prize-row');
+            const newPool = [];
+            rows.forEach(row => {
+                const val = row.querySelector('.input-prize').value.trim();
+                const weight = parseInt(row.querySelector('.input-chance').value.trim());
+                if (val && !isNaN(weight) && weight > 0) {
+                    newPool.push({val, weight});
+                }
+            });
+
+            if (newPool.length > 0) {
+                prizePool = newPool;
+                localStorage.setItem("prizePool", JSON.stringify(prizePool));
+                
+                const modal = bootstrap.Modal.getInstance(settingsModal);
+                modal.hide();
+                alert("Settings Saved! ✅");
+            } else {
+                alert("Please add at least one valid prize.");
+            }
+        }
+
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            
+            const icon = document.getElementById('darkModeIcon');
+            
+            if (body.classList.contains('dark-mode')) {
+                icon.classList.remove('bi-moon-stars-fill');
+                icon.classList.add('bi-sun-fill');
+                icon.classList.remove('text-secondary');
+                icon.classList.add('text-warning');
+            } else {
+                icon.classList.remove('bi-sun-fill');
+                icon.classList.add('bi-moon-stars-fill');
+                icon.classList.remove('text-warning');
+                icon.classList.add('text-secondary');
+            }
+        }
+
+        function fireConfetti() {
+            const c = document.getElementById('confetti-canvas');
+            const ctx = c.getContext('2d');
+            c.width = window.innerWidth;
+            c.height = window.innerHeight;
+            const pieces = Array.from({length: 100}, () => ({
+                x: Math.random() * c.width,
+                y: Math.random() * -c.height,
+                size: Math.random() * 5 + 5,
+                speed: Math.random() * 5 + 2,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                rotation: Math.random() * 360
+            }));
+            let frames = 0;
+            function animate() {
+                ctx.clearRect(0, 0, c.width, c.height);
+                pieces.forEach(p => {
+                    p.y += p.speed;
+                    p.rotation += 5;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                    ctx.restore();
+                });
+                frames++;
+                if (frames < 200) requestAnimationFrame(animate);
+                else ctx.clearRect(0, 0, c.width, c.height);
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>
